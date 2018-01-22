@@ -1,5 +1,7 @@
 package App::RapidAPI;
 
+# ABSTRACT: build a simple prototype for an API
+
 use strict;
 use warnings;
 
@@ -13,6 +15,8 @@ use App::RapidAPI::Schema;
 use App::RapidAPI::DB;
 use App::RapidAPI::Swagger;
 use App::RapidAPI::Mojolicious;
+
+our $VERSION = 0.01;
 
 sub build_app ($model_file, $name, $target_dir) {
     my $lib_dir = File::Spec->catdir(

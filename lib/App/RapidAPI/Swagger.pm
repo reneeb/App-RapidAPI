@@ -1,5 +1,7 @@
 package App::RapidAPI::Swagger;
 
+# ABSTRACT: build the Swagger specification for the API prototype
+
 use v5.20;
 
 use strict;
@@ -13,6 +15,7 @@ use parent 'Exporter';
 use App::RapidAPI::Utils;
 
 use Carp qw(croak);
+use Data::Dumper;
 use File::Spec;
 use IO::File;
 
@@ -32,13 +35,17 @@ sub create_swagger_spec ( $name, $dir, $mwb ) {
     my @tables = @{ $parser->tables || [] };
 
     my @definitions = _make_definitions( @tables );
-    my @paths       = _make_paths( @paths );
+    my @paths       = _make_paths( @tables );
+
+say STDERR Dumper( [ \@paths, \@definitions ] );
+exit;
 
     my $spec = App::RapidAPI::Utils::render(
         'SwaggerSpec.tt',
         {
-            name => $name,
-            
+            name        => $name,
+            paths       => \@paths,
+            definitions => \@definitions,            
         }
     );
 
@@ -55,7 +62,7 @@ sub create_swagger_spec ( $name, $dir, $mwb ) {
 sub _make_definitions ( @objects ){
     my @definitions;
     for my $object ( @objects ) {
-        push @defintions, {
+        push @definitions, {
             object_name => $object->name,
         };
     }
@@ -78,6 +85,8 @@ sub _make_paths ( @objects ){
                 }
             ],
         };
+
+        my $primary_key = $object->
 
         my $path_name = sprintf "%s/:id", $base_name;
         push @paths, {

@@ -1,5 +1,7 @@
 package App::RapidAPI::DB;
 
+# ABSTRACT: create a SQLite database for the API prototype
+
 use v5.20;
 
 use strict;

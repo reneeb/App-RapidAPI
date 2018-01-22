@@ -1,5 +1,7 @@
 package App::RapidAPI::Schema;
 
+# ABSTRACT: build the DBIx::Class schema for the API prototype
+
 use v5.20;
 
 use strict;
