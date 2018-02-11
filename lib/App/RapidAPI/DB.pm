@@ -18,7 +18,7 @@ our @EXPORT = qw(
     create_db
 );
 
-sub create_db ($name, $mwb) {
+sub create_db ($name, $dir, $mwb) {
     eval {
         require MySQL::Workbench::SQLiteSimple;
         require DBI;
