@@ -15,83 +15,60 @@
   },
   "host": "localhost:3000",
   "basePath": "/api/v1",
-  "tags": [
-[% FOREACH tag IN tags %]
+  "tags": [[% FOREACH tag IN tags %]
     {
-      "name": "[% tag %]",
-    },
-[% END %]
+      "name": "[% tag.name %]"
+    }[% UNLESS tag.last %],[% END %][% END %]
   ],
   "schemes": [
     "http"
   ],
-  "paths": {
-[% FOREACH path IN paths %]
-    "[% path.name %]": {
-[% FOREACH method IN paths.methods %]
+  "paths": {[% FOREACH path IN paths %]
+    "[% path.name %]": {[% FOREACH method IN path.methods %]
       "[% method.type %]": {
-        "tags": [
-[% FOREACH tag IN method.tags %]"[% tag %]",
-[% END %]
+        "tags": [[% FOREACH tag IN method.tags %]
+          "[% tag.name %]"[% UNLESS tag.last %],[% END %][% END %]
         ],
         "summary": "[% method.summary %]",
-        "description": "",
+        "description": "[% method.description %]",
         "operationId": "[% method.id %]",
         "consumes": [
-          "application/json",
+          "application/json"
         ],
         "produces": [
           "application/json"
         ],
-        "parameters": [
-[% FOREACH param IN method.parameters %]
+        "parameters": [[% FOREACH param IN method.parameters %]
           {
             "in": "[% param.in %]",
             "name": "[% param.name %]",
             "description": "[% param.description %]",
-            "required": [% param.required %],
-            "schema": {
-              "$ref": "#/definitions/[% param.object %]"
-            }
-          }
-[% END %]
+            "required": [% param.required %]
+          }[% UNLESS param.last %],[% END %][% END %]
         ],
-        "responses": {
-[% FOREACH response IN method.reponses %]
-          "[% response.code %]": {
-[% IF response.schema %]
+        "responses": {[% FOREACH response IN method.reponses %]
+          "[% response.code %]": {[% IF response.schema %]
             "schema" : {
                 "$ref": "#/definitions/[% response.schema %]"
-            }
-[% END %]
+            }[% END %]
             "description": "[% response.description %]
-          },
-[% END %]
-        }
-[% END %]
-      }
-[% END %]
+          }[% UNLESS response.last %],[% END %][% END %]
+        }[% UNLESS path.last %],[% END %][% END %]
+      }[% END %]
     }
   },
-  "definitions": {
-[% FOREACH definition IN definitions %]
+  "definitions": {[% FOREACH definition IN definitions %]
     "[% definition.object %]": {
       "type": "object",
-      "properties": {
-[% FOREACH property IN definition.properties %]
-        "[% property.name %]": {
-[% IF property.format %]
-          "format":"[% property.format %]",
-[% END %]
-          "type": "[% property.type %]",
-        },
-[% END %]
+      "properties": {[% FOREACH property IN definition.properties %]
+        "[% property.name %]": {[% IF property.format %]
+          "format":"[% property.format %]",[% END %]
+          "type": "[% property.type %]"
+        }[% UNLESS property.last %],[% END %][% END %]
       },
       "xml": {
         "name": "[% definition.object %]"
       }
-[% END %]
-    },
-    }
+    }[% END %]
   }
 }

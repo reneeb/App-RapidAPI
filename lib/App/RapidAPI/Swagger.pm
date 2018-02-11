@@ -75,8 +75,10 @@ sub create_swagger_spec ( $name, $dir, $mwb, %opts ) {
 sub _get_tags ( @objects ) {
     my @tags;
     for my $object ( @objects ) {
-        push @tags, $object->name;
+        push @tags, { name => $object->name };
     }
+
+    @tags && do { $tags[-1]->{last} = 1 };
 
     return @tags;
 }
@@ -91,6 +93,8 @@ sub _make_definitions ( @objects ){
             properties => \@properties,
         };
     }
+
+    @definitions && do { $definitions[-1]->{last} = 1 };
 
     return @definitions;
 }
@@ -114,6 +118,8 @@ sub _get_properties ( $object ) {
         };
     }
 
+    @properties && do { $properties[-1]->{last} = 1 };
+
     return @properties;
 }
 
@@ -127,6 +133,7 @@ sub _get_parameters ( $object ) {
         my $name = $column->name;
 
         next COLUMN if $column->autoincrement;
+        next COLUMN if !$name;
 
         my $is_in_pk = grep{ $_ eq $name }@{ $pk || [] };
         my $in       = $is_in_pk ? 'path' : 'body';
@@ -146,17 +153,33 @@ sub _make_paths ( @objects ){
     for my $object ( @objects ) {
         my $base_name = "/" . lc $object->name;
 
-        my %parameters = _get_parameters( $object );
+        my @tags = [{
+            name => $object->name,
+            last => 1,
+        }];
+
+        my %parameters    = _get_parameters( $object );
+        my @parameterlist = sort { $a->{name} cmp $b->{name} }values %parameters;
+        my @post_params   = grep{ $_->{in} ne 'path' }@parameterlist;
+
+        @post_params   && do { $post_params[-1]->{last} = 1 };
+        @parameterlist && do { $parameterlist[-1]->{last} = 1 };
 
         push @paths, {
-            path_name => $base_name,
-            methods   => [
+            name    => $base_name,
+            tags    => \@tags,
+            methods => [
                 {
-                    method     => 'post',
+                    type       => 'post',
                     parameters => [
-                        grep{ $_->{in} ne 'path' }values %parameters,
+                        @post_params,
                     ],
                 }
+            ],
+            responses => [
+                {
+                    
+                },
             ],
         };
 
@@ -172,15 +195,29 @@ sub _make_paths ( @objects ){
 
         my $path_name = sprintf "%s/%s", $base_name, $primary_key_in_path;
         push @paths, {
-            path_name => $path_name,
+            name => $path_name,
         };
+
+        my %responses = (
+            get => [
+                {
+                    code   => 200,
+                    schema => $object->name,
+                },
+            ],
+            delete => [],
+            patch  => [],
+        );
 
         for my $method ( qw(get delete patch) ) {
             push @{ $paths[-1]->{methods} }, {
-                method     => $method,
+                type       => $method,
+                tags       => \@tags,
                 parameters => [
                     ( $method eq 'patch' ? @query_params : () ),
-                    values %parameters,
+                ],
+                responses => [
+                    $responses{$method},
                 ],
             };
         }
