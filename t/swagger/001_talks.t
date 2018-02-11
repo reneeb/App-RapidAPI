@@ -8,12 +8,19 @@ use warnings;
 use Test::More;
 use Test::LongString;
 
+use File::Spec;
 use File::Basename;
 use lib dirname(__FILE__) . '/../../';
 
 use t::App::RapidAPI::TestUtils; 
 
 use App::RapidAPI::Swagger;
+
+local $ENV{RAPIDAPI_SHAREDIR} = File::Spec->catdir(
+    dirname( __FILE__ ),
+    qw(.. ..),
+    'share'
+);
 
 {
     # check sagger for test table
