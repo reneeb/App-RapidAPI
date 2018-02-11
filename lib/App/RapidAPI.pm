@@ -35,7 +35,7 @@ sub build_app ($model_file, $name, $target_dir) {
     create_db (
         $name,
         $target_dir,
-        $lib_dir,
+        $model_file,
     );
 
     my $spec_dir = File::Spec->catdir(
