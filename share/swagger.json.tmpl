@@ -1,0 +1,97 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "[% description %]",
+    "version": "1.0.0",
+    "title": "[% name %]",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "email": "email@yourcompany.tld"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "host": "localhost:3000",
+  "basePath": "/api/v1",
+  "tags": [
+[% FOREACH tag IN tags %]
+    {
+      "name": "[% tag %]",
+    },
+[% END %]
+  ],
+  "schemes": [
+    "http"
+  ],
+  "paths": {
+[% FOREACH path IN paths %]
+    "[% path.name %]": {
+[% FOREACH method IN paths.methods %]
+      "[% method.type %]": {
+        "tags": [
+[% FOREACH tag IN method.tags %]"[% tag %]",
+[% END %]
+        ],
+        "summary": "[% method.summary %]",
+        "description": "",
+        "operationId": "[% method.id %]",
+        "consumes": [
+          "application/json",
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+[% FOREACH param IN method.parameters %]
+          {
+            "in": "[% param.in %]",
+            "name": "[% param.name %]",
+            "description": "[% param.description %]",
+            "required": [% param.required %],
+            "schema": {
+              "$ref": "#/definitions/[% param.object %]"
+            }
+          }
+[% END %]
+        ],
+        "responses": {
+[% FOREACH response IN method.reponses %]
+          "[% response.code %]": {
+[% IF response.schema %]
+            "schema" : {
+                "$ref": "#/definitions/[% response.schema %]"
+            }
+[% END %]
+            "description": "[% response.description %]
+          },
+[% END %]
+        }
+[% END %]
+      }
+[% END %]
+    }
+  },
+  "definitions": {
+[% FOREACH definition IN definitions %]
+    "[% definition.object %]": {
+      "type": "object",
+      "properties": {
+[% FOREACH property IN definition.properties %]
+        "[% property.name %]": {
+[% IF property.format %]
+          "format":"[% property.format %]",
+[% END %]
+          "type": "[% property.type %]",
+        },
+[% END %]
+      },
+      "xml": {
+        "name": "[% definition.object %]"
+      }
+[% END %]
+    },
+    }
+  }
+}
