@@ -94,6 +94,17 @@ sub _make_definitions ( @objects ){
         };
     }
 
+    push @definitions, {
+        object     => 'BadRequest',
+        properties => [
+            {
+                name => 'error_msg',
+                type => 'string',
+                last => 1,
+            },
+        ],
+    };
+
     @definitions && do { $definitions[-1]->{last} = 1 };
 
     return @definitions;
@@ -150,13 +161,20 @@ sub _get_parameters ( $object ) {
 
 sub _make_paths ( @objects ){
     my @paths;
+
+    my $bad_request = {
+        code   => 400,
+        schema => 'BadRequest',
+        last   => 1,
+    };
+
     for my $object ( @objects ) {
         my $base_name = "/" . lc $object->name;
 
-        my @tags = [{
+        my @tags = ({
             name => $object->name,
             last => 1,
-        }];
+        });
 
         my %parameters    = _get_parameters( $object );
         my @parameterlist = sort { $a->{name} cmp $b->{name} }values %parameters;
@@ -167,18 +185,37 @@ sub _make_paths ( @objects ){
 
         push @paths, {
             name    => $base_name,
-            tags    => \@tags,
             methods => [
                 {
+                    tags       => \@tags,
+                    id         => $object->name . '_create',
                     type       => 'post',
                     parameters => [
                         @post_params,
                     ],
-                }
-            ],
-            responses => [
+                    responses => [
+                        {
+                            code   => 201,
+                            schema => $object->name,
+                        },
+                        $bad_request,
+                    ],
+                },
                 {
-                    
+                    tags        => \@tags,
+                    id          => $object->name . '_list',
+                    description => 'Get list of ' . $object->name,
+                    type        => 'get',
+                    parameters  => [
+                    ],
+                    responses => [
+                        {
+                            code  => 200,
+                            type  => 'array',
+                            items => $object->name,
+                        },
+                        $bad_request,
+                    ],
                 },
             ],
         };
@@ -201,27 +238,46 @@ sub _make_paths ( @objects ){
         my %responses = (
             get => [
                 {
+                    code        => 200,
+                    schema      => $object->name,
+                    description => 'Get one entity of ' . $object->name,
+                },
+                $bad_request,
+            ],
+            delete => [
+                {
+                    code        => 204,
+                    description => 'Delete ' . $object->name,
+                },
+                $bad_request,
+            ],
+            patch  => [
+                {
                     code   => 200,
                     schema => $object->name,
                 },
+                $bad_request,
             ],
-            delete => [],
-            patch  => [],
         );
 
         for my $method ( qw(get delete patch) ) {
+            my $id          = sprintf "%s_%s", $object->name, $method;
+            my $description = '';
+
             push @{ $paths[-1]->{methods} }, {
-                type       => $method,
-                tags       => \@tags,
-                parameters => [
+                type        => $method,
+                tags        => \@tags,
+                id          => $id,
+                description => $description,
+                parameters  => [
                     ( $method eq 'patch' ? @query_params : () ),
                 ],
-                responses => [
-                    $responses{$method},
-                ],
+                responses => $responses{$method},
             };
         }
     }
+
+    @paths && do { $paths[-1]->{last} = 1 };
 
     return @paths;
 }

@@ -26,8 +26,8 @@
   "paths": {[% FOREACH path IN paths %]
     "[% path.name %]": {[% FOREACH method IN path.methods %]
       "[% method.type %]": {
-        "tags": [[% FOREACH tag IN method.tags %]
-          "[% tag.name %]"[% UNLESS tag.last %],[% END %][% END %]
+        "tags": [[% FOREACH method_tag IN method.tags %]
+          "[% method_tag.name %]"[% UNLESS method_tag.last %],[% END %][% END %]
         ],
         "summary": "[% method.summary %]",
         "description": "[% method.description %]",
@@ -46,16 +46,16 @@
             "required": [% param.required %]
           }[% UNLESS param.last %],[% END %][% END %]
         ],
-        "responses": {[% FOREACH response IN method.reponses %]
+        "responses": {[% FOREACH response IN method.responses %]
           "[% response.code %]": {[% IF response.schema %]
             "schema" : {
                 "$ref": "#/definitions/[% response.schema %]"
-            }[% END %]
-            "description": "[% response.description %]
+            },[% END %]
+            "description": "[% response.description %]"
           }[% UNLESS response.last %],[% END %][% END %]
-        }[% UNLESS path.last %],[% END %][% END %]
-      }[% END %]
-    }
+        }
+      }[% UNLESS path.last %],[% END %][% END %]
+    }[% END %]
   },
   "definitions": {[% FOREACH definition IN definitions %]
     "[% definition.object %]": {
