@@ -54,8 +54,8 @@
             "description": "[% response.description %]"
           }[% UNLESS response.last %],[% END %][% END %]
         }
-      }[% UNLESS path.last %],[% END %][% END %]
-    }[% END %]
+      }[% UNLESS method.last %],[% END %][% END %]
+    }[% UNLESS path.last %],[% END %][% END %]
   },
   "definitions": {[% FOREACH definition IN definitions %]
     "[% definition.object %]": {
@@ -69,6 +69,6 @@
       "xml": {
         "name": "[% definition.object %]"
       }
-    }[% END %]
+    }[% UNLESS definition.last %],[% END %][% END %]
   }
 }

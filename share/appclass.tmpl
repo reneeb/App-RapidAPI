@@ -1,0 +1,47 @@
+package [% class %];
+use Mojo::Base 'Mojolicious';
+
+[% IF use_DBIC %]use [% class %]::DB::Schema;[% END %]
+
+# This method will run once at server start
+sub startup {
+  my $self = shift;
+
+  # Load configuration from hash returned by "my_app.conf"
+  my $config = $self->plugin('Config');
+
+  # Documentation browser under "/perldoc"
+[% FOREACH plugin IN plugins %]$self->plugin('[% plugin %]');
+[% END %]
+
+[% IF use_DBIC %]
+  my $schema;
+  $self->app->helper(
+    schema => sub {
+      $schema //= [% class %]::DB::Schema->connect(
+        $config->{db}->{dsn},
+        $config->{db}->{user},
+        $config->{db}->{password},
+      );
+    }
+  );
+
+  $self->app->helper(
+     db => sub {
+        my $c        = shift;
+        my $rs_class = shift; 
+        $c->schema->resultset( $rs_class );
+     } 
+  );
+[% END %]
+
+  # Router
+  my $r = $self->routes;
+
+  # Normal route to controller
+  $r->get('/')->to('example#welcome');
+[% FOREACH route IN routes %]
+  $r->[% route.method %]('[% route.path %]')->to('[% route.controller %]#[% route.action %]');[% END %]
+}
+
+1;

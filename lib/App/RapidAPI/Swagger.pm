@@ -20,6 +20,7 @@ use Data::Dumper;
 use File::ShareDir qw(:ALL);
 use File::Spec;
 use IO::File;
+use JSON;
 
 our @EXPORT = qw(
     create_swagger_spec
@@ -28,7 +29,7 @@ our @EXPORT = qw(
 sub create_swagger_spec ( $name, $dir, $mwb, %opts ) {
     eval {
         require MySQL::Workbench::Parser;
-    } or croak "Can't load MySQL::Workbench::Parser, you can't create the schema";
+    } or croak "Can't load MySQL::Workbench::Parser, you can't create the swagger spec";
 
     my $parser = MySQL::Workbench::Parser->new(
         file => $mwb,
@@ -36,15 +37,15 @@ sub create_swagger_spec ( $name, $dir, $mwb, %opts ) {
 
     my @tables = @{ $parser->tables || [] };
 
-    my @definitions = _make_definitions( @tables );
-    my @paths       = _make_paths( @tables );
-    my @tags        = _get_tags( @tables );
+    my @definitions = _make_definitions( \@tables );
+    my @paths       = _make_paths( \@tables, %opts );
+    my @tags        = _get_tags( \@tables );
 
     my $share_dir = $ENV{RAPIDAPI_SHAREDIR} || module_dir( 'App::RapidAPI');
 
     my $template = File::Spec->catfile(
         $share_dir,
-        'swagger.json.tmpl'
+        'swagger.json'
     );
 
     my $description = '';
@@ -61,18 +62,22 @@ sub create_swagger_spec ( $name, $dir, $mwb, %opts ) {
     );
 
     if ( !$opts{no_file} ) {
-        my $cleaned_name = lc( $name =~ s{[^\w]}{_}xmsg );
+        my $cleaned_name = lc( $name =~ s{[^\w]}{_}xmsgr );
         my $path         = File::Spec->catfile( $dir, $cleaned_name . '_swagger.json' );
         my $fh           = IO::File->new( $path, 'w' );
 
         $fh->print( $spec );
         $fh->close;
+
+        return $path;
     }
 
     return $spec;
 }
 
-sub _get_tags ( @objects ) {
+sub _get_tags ( $tables ) {
+    my @objects = @{ $tables };
+
     my @tags;
     for my $object ( @objects ) {
         push @tags, { name => $object->name };
@@ -83,7 +88,9 @@ sub _get_tags ( @objects ) {
     return @tags;
 }
 
-sub _make_definitions ( @objects ){
+sub _make_definitions ( $tables ){
+    my @objects = @{ $tables };
+
     my @definitions;
     for my $object ( @objects ) {
         my @properties = _get_properties( $object );
@@ -149,17 +156,23 @@ sub _get_parameters ( $object ) {
         my $is_in_pk = grep{ $_ eq $name }@{ $pk || [] };
         my $in       = $is_in_pk ? 'path' : 'body';
 
+        my $comment  = $column->comment;
+        my $data     = eval { JSON->new->utf8(1)->decode( $comment || '{}' ) };
+
         $parameters{$name} = {
-            ( $column->not_null ? (required => 'true') : () ),
-            in   => $in,
-            name => $name,
+            required    => ( $column->not_null ? 'true' : 'false' ),
+            in          => $in,
+            name        => $name,
+            description => $data->{description},
         };
     }
 
     return %parameters;
 }
 
-sub _make_paths ( @objects ){
+sub _make_paths ( $tables, %opts ){
+    my @objects = @{ $tables };
+
     my @paths;
 
     my $bad_request = {
@@ -187,10 +200,11 @@ sub _make_paths ( @objects ){
             name    => $base_name,
             methods => [
                 {
-                    tags       => \@tags,
-                    id         => $object->name . '_create',
-                    type       => 'post',
-                    parameters => [
+                    tags        => \@tags,
+                    id          => $object->name . '_create',
+                    description => 'Create new ' . $object->name,
+                    type        => 'post',
+                    parameters  => [
                         @post_params,
                     ],
                     responses => [
@@ -200,6 +214,11 @@ sub _make_paths ( @objects ){
                         },
                         $bad_request,
                     ],
+                    ( $opts{mojo} ? (
+                              'x-mojo-to'   => $object->name . '#post',
+                              'x-mojo-name' => $object->name . '_create'
+                        ) : ()
+                    ),
                 },
                 {
                     tags        => \@tags,
@@ -216,6 +235,11 @@ sub _make_paths ( @objects ){
                         },
                         $bad_request,
                     ],
+                    ( $opts{mojo} ? (
+                              'x-mojo-to'   => $object->name . '#list',
+                              'x-mojo-name' => $object->name . '_list'
+                        ) : ()
+                    ),
                 },
             ],
         };
@@ -235,34 +259,41 @@ sub _make_paths ( @objects ){
             name => $path_name,
         };
 
-        my %responses = (
-            get => [
-                {
-                    code        => 200,
-                    schema      => $object->name,
-                    description => 'Get one entity of ' . $object->name,
-                },
-                $bad_request,
-            ],
-            delete => [
-                {
-                    code        => 204,
-                    description => 'Delete ' . $object->name,
-                },
-                $bad_request,
-            ],
-            patch  => [
-                {
-                    code   => 200,
-                    schema => $object->name,
-                },
-                $bad_request,
-            ],
+        my %info = (
+            get => {
+                description => 'Get one entity of ' . $object->name,
+                responses   => [
+                    {
+                        code        => 200,
+                        schema      => $object->name,
+                    },
+                    $bad_request,
+                ],
+            },
+            delete => {
+                description => 'Delete ' . $object->name,
+                responses   => [
+                    {
+                        code        => 204,
+                    },
+                    $bad_request,
+                ],
+            },
+            patch  => {
+                description => 'Update instance of ' . $object->name,
+                responses   => [
+                    {
+                        code        => 200,
+                        schema      => $object->name,
+                    },
+                    $bad_request,
+                ],
+            },
         );
 
         for my $method ( qw(get delete patch) ) {
             my $id          = sprintf "%s_%s", $object->name, $method;
-            my $description = '';
+            my $description = delete $info{$method}->{description};
 
             push @{ $paths[-1]->{methods} }, {
                 type        => $method,
@@ -272,9 +303,11 @@ sub _make_paths ( @objects ){
                 parameters  => [
                     ( $method eq 'patch' ? @query_params : () ),
                 ],
-                responses => $responses{$method},
+                responses => $info{$method}->{responses},
             };
         }
+
+        @paths && do { $paths[-1]->{methods}->[-1]->{last} = 1 };
     }
 
     @paths && do { $paths[-1]->{last} = 1 };

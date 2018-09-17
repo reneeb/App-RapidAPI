@@ -14,7 +14,7 @@ use lib dirname(__FILE__) . '/../../';
 
 use t::App::RapidAPI::TestUtils; 
 
-use App::RapidAPI::Swagger;
+use App::RapidAPI::Mojolicious;
 
 local $ENV{RAPIDAPI_SHAREDIR} = File::Spec->catdir(
     dirname( __FILE__ ),
@@ -29,9 +29,17 @@ local $ENV{RAPIDAPI_SHAREDIR} = File::Spec->catdir(
 
     mkdir $out;
 
-    my $output = create_swagger_spec( 'TalksTest', $out, $path, { no_file => 1 } );
-    my $check  = slurp_file( local_path( 'docs/001_talks.spec' ) );
-    is_string $output, $check
+    my $tables;
+    eval {
+        require MySQL::Workbench::Parser;
+        my $parser = MySQL::Workbench::Parser->new(
+            file => $path,
+        );
+
+        $tables = $parser->tables || [];
+    };
+
+    generate_mojo_app( $out, 'TestTalk', undef, $tables );
 
 }
 

@@ -17,13 +17,13 @@ GetOptions(
 );
 
 if ( !$mwb_file || !-f $mwb_file ) {
-    say 'Need MySQL Workbench file!';
-    exit 1;
+    say "Need MySQL Workbench file!\n";
+    print_usage();
 }
 
-if ( !camel_case( $name ) ) {
-    say 'App name must be CamelCase';
-    exit 1;
+if ( !$name || $name !~ m{\A[A-Z][a-z]+(?:[A-Za-z]+)?\z}xms ) {
+    say "App name must be CamelCase\n";
+    print_usage();
 }
 
 $target_dir //= name_to_path( $name );
@@ -31,4 +31,11 @@ $target_dir //= name_to_path( $name );
 App::RapidAPI::build_app( $mwb_file, $name, $target_dir );
 
 sub print_usage {
+    say "$0 --model-file <path> --name <name> [--target-dir <dir>]
+    --model-file     path to MySQL Workbench model
+    --name           the name for the Application. The name has to be CamelCase
+    --target-dir     directory where the application is created\n";
+
+    exit 1;
 }
+

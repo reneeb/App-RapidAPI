@@ -30,7 +30,7 @@ sub create_db ($name, $dir, $mwb) {
         croak "Need $modules";
     };
 
-    my $cleaned_name = lc ( $name =~ s{[^\w]}{_}xmsg );
+    my $cleaned_name = lc ( $name =~ s{[^\w]}{_}xmsgr );
     my $db  = File::Spec->catfile( $dir, $cleaned_name . '.db' );
     my $dbh = DBI->connect( "DBI:SQLite:$db" );
 
@@ -41,6 +41,8 @@ sub create_db ($name, $dir, $mwb) {
     my @sqls = $sqlite->create_sql( no_files => 1 );
 
     $dbh->do( $_ ) for @sqls;
+
+    return 1;
 }
 
 1;

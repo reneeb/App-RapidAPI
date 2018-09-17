@@ -45,15 +45,31 @@ sub build_app ($model_file, $name, $target_dir) {
 
     make_path $spec_dir;
 
-    generate_swagger_spec (
+    my $swagger_spec = create_swagger_spec (
         $name,
         $spec_dir,
         $model_file,
+        mojo => 1,
     );
+
+    my $tables;
+    eval {
+        require MySQL::Workbench::Parser;
+        my $parser = MySQL::Workbench::Parser->new(
+            file => $model_file,
+        );
+
+        $tables = $parser->tables || [];
+    };
+
+    my $config = generate_mojo_app_config( $swagger_spec );
+    $config->{use_dbic} = 1;
 
     generate_mojo_app(
         $target_dir,
         $name,
+        $config,
+        $tables,
     );
 }
 

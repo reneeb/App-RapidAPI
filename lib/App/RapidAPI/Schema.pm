@@ -33,6 +33,8 @@ sub create_schema ( $mwb, $name, $dir, $namespace = $name . '::DB', $schema = 'S
     );
 
     $foo->create_schema;
+
+    return 1;
 }
 
 1;

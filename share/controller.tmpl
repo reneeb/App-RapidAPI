@@ -1,0 +1,63 @@
+package [% class %];
+
+use Mojo::Base 'Mojolicious::Controller';
+
+sub list {
+    my ($c) = @_;
+
+    $c->openapi->valid_input or return;
+
+    my $id    = $c->param('id');
+    my @items = $c->db('[% name %]')->search()->all;
+
+    $c->render( openapi => $c->dbic_to_hash( \@items ) );
+}
+
+sub get {
+    my ($c) = @_;
+
+    $c->openapi->valid_input or return;
+
+    my $id   = $c->param('id');
+    my $item = $c->db('[% name %]')->find( $id )->first;
+
+    $c->render( openapi => $c->dbic_to_hash( $item ) );
+}
+
+sub patch {
+    my ($c) = @_;
+
+    $c->openapi->valid_input or return;
+
+    my $id    = $c->param('id');
+    my $input = $c->validation->output;
+    my $item  = $c->db('[% name %]')->find( $id )->update( $input );
+
+    $c->render( openapi => $c->dbic_to_hash( $item ) );
+}
+
+sub post {
+    my ($c) = @_;
+
+    $c->openapi->valid_input or return;
+
+    my $id    = $c->param('id');
+    my $input = $c->validation->output;
+    my $item  = $c->db('[% name %]')->new( $input );
+
+    $c->render( openapi => $c->dbic_to_hash( $item ) );
+}
+
+sub delete {
+    my ($c) = @_;
+
+    $c->openapi->valid_input or return;
+
+    my $id   = $c->param('id');
+    my $item = $c->db('[% name %]')->find( $id )->delete;
+
+    $c->render( openapi => undef, status => 204 );
+}
+
+1;
+
